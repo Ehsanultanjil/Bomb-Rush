@@ -312,6 +312,13 @@ export default function App() {
     }
   }, []);
 
+  const handleMobileJoystickVector = useCallback((vx: number, vy: number) => {
+    soundManager.ensureAudio();
+    if (engineRef.current) {
+      engineRef.current.setJoystickVector(vx, vy);
+    }
+  }, []);
+
   const handleMobileBomb = useCallback(() => {
     soundManager.ensureAudio();
     if (engineRef.current) {
@@ -320,7 +327,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-neutral-950 flex flex-col md:flex-row items-stretch justify-between p-0 select-none scanlines">
+    <div className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] overflow-hidden bg-neutral-950 flex flex-col md:flex-row items-stretch justify-between p-0 select-none scanlines">
       {/* Background Ambient Glow */}
       <div className="absolute top-1/4 left-1/3 -translate-x-1/2 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/3 translate-x-1/2 w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -353,7 +360,7 @@ export default function App() {
 
       {/* In-Game HUD and Fullscreen Canvas Area */}
       {gameState !== 'MENU' && gameState !== 'HOW_TO_PLAY' && gameState !== 'SETTINGS' && engine && (
-        <div className="relative z-10 w-full h-full flex flex-col md:flex-row items-stretch justify-between gap-1 sm:gap-2 md:gap-3 p-1 sm:p-2 md:p-3 overflow-hidden">
+        <div className="relative z-10 w-full h-full max-h-full flex flex-col md:flex-row items-stretch justify-between gap-1 sm:gap-2 p-1 sm:p-2 overflow-hidden">
           {/* Top Compact Bar for mobile screens (< md) */}
           <CompactTopHUD
             player={engine.player}
@@ -460,10 +467,11 @@ export default function App() {
           </div>
 
           {/* Virtual Mobile Controls (always visible in game view for touch or mobile viewports) */}
-          {gameState === 'PLAYING' && (
+          {(gameState === 'PLAYING' || gameState === 'COUNTDOWN' || gameState === 'PAUSED') && (
             <div className="flex md:hidden w-full flex-shrink-0">
               <MobileControls
                 onDirectionChange={handleMobileDirection}
+                onJoystickVector={handleMobileJoystickVector}
                 onBombPress={handleMobileBomb}
               />
             </div>

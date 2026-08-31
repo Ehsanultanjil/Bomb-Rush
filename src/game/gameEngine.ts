@@ -113,6 +113,8 @@ export class GameEngine {
   private p2KeyOrder: string[] = [];
   private requestedDirectionP1: Direction = 'NONE';
   private requestedDirectionP2: Direction = 'NONE';
+  private joystickVectorP1 = { x: 0, y: 0 };
+  private joystickVectorP2 = { x: 0, y: 0 };
   private bombRequestedP1: boolean = false;
   private bombRequestedP2: boolean = false;
 
@@ -215,6 +217,8 @@ export class GameEngine {
     this.p2KeyOrder = [];
     this.requestedDirectionP1 = 'NONE';
     this.requestedDirectionP2 = 'NONE';
+    this.joystickVectorP1 = { x: 0, y: 0 };
+    this.joystickVectorP2 = { x: 0, y: 0 };
     this.bombRequestedP1 = false;
     this.bombRequestedP2 = false;
   }
@@ -465,6 +469,16 @@ export class GameEngine {
     }
   }
 
+  public setJoystickVector(vx: number, vy: number, playerId: 'p1' | 'p2' = 'p1') {
+    if (playerId === 'p1') {
+      this.joystickVectorP1.x = vx;
+      this.joystickVectorP1.y = vy;
+    } else {
+      this.joystickVectorP2.x = vx;
+      this.joystickVectorP2.y = vy;
+    }
+  }
+
   public triggerBombAction(playerId: 'p1' | 'p2' = 'p1') {
     if (playerId === 'p1') {
       this.bombRequestedP1 = true;
@@ -638,6 +652,96 @@ export class GameEngine {
       if (playerId === 'p1') this.bombRequestedP1 = false;
       else this.bombRequestedP2 = false;
       this.tryPlaceBomb(Math.round(p.pixelX), Math.round(p.pixelY), playerId);
+    }
+
+    // 1. Continuous Analog Joystick Movement
+    const joy = playerId === 'p1' ? this.joystickVectorP1 : this.joystickVectorP2;
+    const joyLen = Math.hypot(joy.x, joy.y);
+
+    if (joyLen > 0.08) {
+      const normLen = Math.max(joyLen, 1.0);
+      const vx = joy.x / normLen;
+      const vy = joy.y / normLen;
+      const speedMagnitude = Math.min(joyLen, 1.0);
+
+      // Facing
+      if (Math.abs(vx) > Math.abs(vy) * 1.25) {
+        p.facing = vx > 0 ? 'RIGHT' : 'LEFT';
+      } else if (Math.abs(vy) > Math.abs(vx) * 1.25) {
+        p.facing = vy > 0 ? 'DOWN' : 'UP';
+      } else {
+        if (vy < 0) p.facing = vx < 0 ? 'UP_LEFT' : 'UP_RIGHT';
+        else p.facing = vx < 0 ? 'DOWN_LEFT' : 'DOWN_RIGHT';
+      }
+      p.direction = p.facing;
+      p.isMoving = true;
+      p.walkFrame += dt * speedMagnitude;
+
+      const BODY_RADIUS = 0.36;
+      const ALIGN_SPEED = p.speed * dt * 0.95;
+
+      // Move X axis if vx != 0
+      if (Math.abs(vx) > 0.05) {
+        const moveDistX = Math.abs(vx) * p.speed * dt;
+        const dirX = Math.sign(vx);
+        let stepX = moveDistX;
+        let movedX = false;
+        while (stepX > 0.005) {
+          const testX = p.pixelX + dirX * stepX;
+          if (this.isPositionWalkable(testX, p.pixelY, BODY_RADIUS, p)) {
+            p.pixelX = testX;
+            movedX = true;
+            break;
+          }
+          stepX -= 0.015;
+        }
+
+        // Corner assist if purely pushing horizontal but blocked
+        if (!movedX && Math.abs(vy) < 0.3) {
+          const floorY = Math.floor(p.pixelY);
+          const ceilY = Math.ceil(p.pixelY);
+          if (floorY !== ceilY) {
+            const tryUp = this.isPositionWalkable(p.pixelX + dirX * 0.1, floorY, BODY_RADIUS, p);
+            const tryDown = this.isPositionWalkable(p.pixelX + dirX * 0.1, ceilY, BODY_RADIUS, p);
+            if (tryUp && !tryDown) p.pixelY = Math.max(floorY, p.pixelY - ALIGN_SPEED);
+            else if (tryDown && !tryUp) p.pixelY = Math.min(ceilY, p.pixelY + ALIGN_SPEED);
+          }
+        }
+      }
+
+      // Move Y axis if vy != 0
+      if (Math.abs(vy) > 0.05) {
+        const moveDistY = Math.abs(vy) * p.speed * dt;
+        const dirY = Math.sign(vy);
+        let stepY = moveDistY;
+        let movedY = false;
+        while (stepY > 0.005) {
+          const testY = p.pixelY + dirY * stepY;
+          if (this.isPositionWalkable(p.pixelX, testY, BODY_RADIUS, p)) {
+            p.pixelY = testY;
+            movedY = true;
+            break;
+          }
+          stepY -= 0.015;
+        }
+
+        // Corner assist if purely pushing vertical but blocked
+        if (!movedY && Math.abs(vx) < 0.3) {
+          const floorX = Math.floor(p.pixelX);
+          const ceilX = Math.ceil(p.pixelX);
+          if (floorX !== ceilX) {
+            const tryLeft = this.isPositionWalkable(floorX, p.pixelY + dirY * 0.1, BODY_RADIUS, p);
+            const tryRight = this.isPositionWalkable(ceilX, p.pixelY + dirY * 0.1, BODY_RADIUS, p);
+            if (tryLeft && !tryRight) p.pixelX = Math.max(floorX, p.pixelX - ALIGN_SPEED);
+            else if (tryRight && !tryLeft) p.pixelX = Math.min(ceilX, p.pixelX + ALIGN_SPEED);
+          }
+        }
+      }
+
+      p.gridX = Math.round(p.pixelX);
+      p.gridY = Math.round(p.pixelY);
+      this.checkPowerUpPickupFor(p);
+      return;
     }
 
     // Determine horizontal and vertical movement requests (supports simultaneous 2-button presses)
