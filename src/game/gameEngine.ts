@@ -958,12 +958,8 @@ export class GameEngine {
     // Active bomb check
     for (const b of this.bombs) {
       if (b.gridX === col && b.gridY === row) {
-        if (player) {
-          // If player is currently overlapping/inside this bomb tile, allow them to step off freely
-          const dist = Math.hypot(player.pixelX - col, player.pixelY - row);
-          if (dist < 0.72) {
-            continue; // Player is inside bomb cell, not blocked yet
-          }
+        if (player && b.overlappingPlayers?.includes(player.id)) {
+          continue; // Player is overlapping this bomb (e.g. just placed it), allow stepping away freely
         }
         return true;
       }
@@ -1001,6 +997,18 @@ export class GameEngine {
     // Check if bomb already exists at this cell
     if (this.bombs.some(b => b.gridX === gx && b.gridY === gy)) return;
 
+    // Track players currently overlapping this cell so they can step away freely without getting stuck
+    const overlapping: ('p1' | 'p2')[] = [];
+    if (Math.abs(this.player.pixelX - gx) < 0.98 && Math.abs(this.player.pixelY - gy) < 0.98) {
+      overlapping.push('p1');
+    }
+    if (this.player2 && Math.abs(this.player2.pixelX - gx) < 0.98 && Math.abs(this.player2.pixelY - gy) < 0.98) {
+      overlapping.push('p2');
+    }
+    if (!overlapping.includes(playerId)) {
+      overlapping.push(playerId);
+    }
+
     this.bombs.push({
       id: `bomb_${playerId}_${Date.now()}_${Math.random()}`,
       gridX: gx,
@@ -1010,6 +1018,7 @@ export class GameEngine {
       range: p.fireRange,
       ownerId: playerId,
       isTriggered: false,
+      overlappingPlayers: overlapping,
     });
 
     soundManager.playBombPlaced();
@@ -1021,6 +1030,17 @@ export class GameEngine {
     for (let i = this.bombs.length - 1; i >= 0; i--) {
       const b = this.bombs[i];
       b.timer -= dt;
+
+      // Update overlapping players list - remove player once they fully clear the bomb cell
+      if (b.overlappingPlayers && b.overlappingPlayers.length > 0) {
+        b.overlappingPlayers = b.overlappingPlayers.filter(pid => {
+          const pl = pid === 'p1' ? this.player : this.player2;
+          if (!pl) return false;
+          const inX = Math.abs(pl.pixelX - b.gridX) < 0.88;
+          const inY = Math.abs(pl.pixelY - b.gridY) < 0.88;
+          return inX && inY;
+        });
+      }
 
       // Warning ticks
       if (b.timer <= 0.6 && b.timer + dt > 0.6) {

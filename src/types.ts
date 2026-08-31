@@ -60,6 +60,7 @@ export interface Bomb {
   range: number;
   ownerId: 'p1' | 'p2';
   isTriggered: boolean;
+  overlappingPlayers?: ('p1' | 'p2')[];
 }
 
 export type ExplosionPart = 

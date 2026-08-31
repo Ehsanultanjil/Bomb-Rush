@@ -8,19 +8,23 @@ interface MobileControlsProps {
   onBombPress: () => void;
 }
 
+const MAX_RADIUS = 50; // Maximum joystick drag distance in pixels
+
 export const MobileControls: React.FC<MobileControlsProps> = ({
   onDirectionChange,
   onJoystickVector,
   onBombPress,
 }) => {
-  const [stickPos, setStickPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isStickActive, setIsStickActive] = useState<boolean>(false);
+  // Dynamic Floating Joystick State (PUBG / FreeFire style)
+  const [isActive, setIsActive] = useState(false);
+  const [origin, setOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [knobOffset, setKnobOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [activeDir, setActiveDir] = useState<Direction>('NONE');
-  const [isBombPressed, setIsBombPressed] = useState<boolean>(false);
+  const [isBombPressed, setIsBombPressed] = useState(false);
 
-  const joyBaseRef = useRef<HTMLDivElement>(null);
   const joyTouchIdRef = useRef<number | null>(null);
   const bombTouchIdRef = useRef<number | null>(null);
+  const originRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const onJoystickVectorRef = useRef(onJoystickVector);
   onJoystickVectorRef.current = onJoystickVector;
@@ -28,23 +32,26 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   const onDirectionChangeRef = useRef(onDirectionChange);
   onDirectionChangeRef.current = onDirectionChange;
 
-  // Process joystick touch coordinate
-  const processTouchPos = useCallback((clientX: number, clientY: number) => {
-    if (!joyBaseRef.current) return;
-    const rect = joyBaseRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+  const updateJoystick = useCallback((clientX: number, clientY: number) => {
+    let dx = clientX - originRef.current.x;
+    let dy = clientY - originRef.current.y;
+    let dist = Math.hypot(dx, dy);
 
-    const dx = clientX - centerX;
-    const dy = clientY - centerY;
-    const dist = Math.hypot(dx, dy);
-
-    // Max visual thumb displacement radius
-    const maxRadius = Math.min(rect.width, rect.height) * 0.42;
+    // Dynamic following (PUBG style): if dragged further than 1.6x max radius, pull the origin along smoothly
+    if (dist > MAX_RADIUS * 1.5) {
+      const angle = Math.atan2(dy, dx);
+      originRef.current = {
+        x: clientX - Math.cos(angle) * MAX_RADIUS * 1.5,
+        y: clientY - Math.sin(angle) * MAX_RADIUS * 1.5,
+      };
+      setOrigin({ ...originRef.current });
+      dx = clientX - originRef.current.x;
+      dy = clientY - originRef.current.y;
+      dist = Math.hypot(dx, dy);
+    }
 
     if (dist < 4) {
-      setStickPos({ x: 0, y: 0 });
-      setIsStickActive(true);
+      setKnobOffset({ x: 0, y: 0 });
       setActiveDir('NONE');
       onJoystickVectorRef.current?.(0, 0);
       onDirectionChangeRef.current?.('NONE');
@@ -52,19 +59,18 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     }
 
     const angle = Math.atan2(dy, dx);
-    const clampedDist = Math.min(dist, maxRadius);
-    const knobX = Math.cos(angle) * clampedDist;
-    const knobY = Math.sin(angle) * clampedDist;
+    const clampedDist = Math.min(dist, MAX_RADIUS);
+    const kx = Math.cos(angle) * clampedDist;
+    const ky = Math.sin(angle) * clampedDist;
 
-    setStickPos({ x: knobX, y: knobY });
-    setIsStickActive(true);
+    setKnobOffset({ x: kx, y: ky });
 
-    // Analog normalized vector [-1, 1]
-    const vx = knobX / maxRadius;
-    const vy = knobY / maxRadius;
+    // Normalized analog vector [-1, 1]
+    const vx = kx / MAX_RADIUS;
+    const vy = ky / MAX_RADIUS;
     onJoystickVectorRef.current?.(vx, vy);
 
-    // 8-directional mapping
+    // 8-directional classification
     const deg = (angle * 180) / Math.PI;
     let dir: Direction = 'NONE';
     if (deg >= -22.5 && deg < 22.5) dir = 'RIGHT';
@@ -80,99 +86,116 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     onDirectionChangeRef.current?.(dir);
   }, []);
 
-  const resetStick = useCallback(() => {
+  const stopJoystick = useCallback(() => {
     joyTouchIdRef.current = null;
-    setStickPos({ x: 0, y: 0 });
-    setIsStickActive(false);
+    setIsActive(false);
+    setKnobOffset({ x: 0, y: 0 });
     setActiveDir('NONE');
     onJoystickVectorRef.current?.(0, 0);
     onDirectionChangeRef.current?.('NONE');
   }, []);
 
-  // Joystick Touch Handlers
-  const handleJoyTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
-    if (e.changedTouches.length > 0) {
-      const touch = e.changedTouches[0];
-      joyTouchIdRef.current = touch.identifier;
-      processTouchPos(touch.clientX, touch.clientY);
+  // Full-Screen Touch Area for Dynamic Anywhere Joystick (excludes buttons, HUD, modals)
+  const handleTouchZoneStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.closest('button') || target.closest('header') || target.closest('nav') || target.closest('[data-no-joystick]'))) {
+      return;
+    }
+
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      // If we don't have an active joystick touch yet
+      if (joyTouchIdRef.current === null) {
+        joyTouchIdRef.current = touch.identifier;
+        originRef.current = { x: touch.clientX, y: touch.clientY };
+        setOrigin({ x: touch.clientX, y: touch.clientY });
+        setKnobOffset({ x: 0, y: 0 });
+        setIsActive(true);
+        updateJoystick(touch.clientX, touch.clientY);
+        break;
+      }
     }
   };
 
-  const handleJoyTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
+  const handleTouchZoneMove = (e: React.TouchEvent) => {
     if (joyTouchIdRef.current === null) return;
     for (let i = 0; i < e.touches.length; i++) {
       const touch = e.touches[i];
       if (touch.identifier === joyTouchIdRef.current) {
-        processTouchPos(touch.clientX, touch.clientY);
+        updateJoystick(touch.clientX, touch.clientY);
         break;
       }
     }
   };
 
-  const handleJoyTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
+  const handleTouchZoneEnd = (e: React.TouchEvent) => {
     for (let i = 0; i < e.changedTouches.length; i++) {
       if (e.changedTouches[i].identifier === joyTouchIdRef.current) {
-        resetStick();
+        stopJoystick();
         break;
       }
     }
   };
 
-  // Mouse fallback for Joystick (Desktop Testing)
+  // Mouse testing fallback for desktop
   const isMouseDownRef = useRef(false);
 
-  const handleJoyMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.closest('button') || target.closest('header') || target.closest('nav') || target.closest('[data-no-joystick]'))) {
+      return;
+    }
     isMouseDownRef.current = true;
-    processTouchPos(e.clientX, e.clientY);
+    originRef.current = { x: e.clientX, y: e.clientY };
+    setOrigin({ x: e.clientX, y: e.clientY });
+    setKnobOffset({ x: 0, y: 0 });
+    setIsActive(true);
+    updateJoystick(e.clientX, e.clientY);
   };
 
-  const handleJoyMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent) => {
     if (isMouseDownRef.current) {
-      processTouchPos(e.clientX, e.clientY);
+      updateJoystick(e.clientX, e.clientY);
     }
   };
 
-  const handleJoyMouseUp = () => {
+  const handleMouseUp = () => {
     if (isMouseDownRef.current) {
       isMouseDownRef.current = false;
-      resetStick();
+      stopJoystick();
     }
   };
 
-  // Window mouse up listener for joystick release
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isMouseDownRef.current) {
         isMouseDownRef.current = false;
-        resetStick();
+        stopJoystick();
       }
     };
     window.addEventListener('mouseup', handleGlobalMouseUp);
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [resetStick]);
+  }, [stopJoystick]);
 
-  // Bomb Touch Handlers
+  // Bomb Button Touch Handlers
   const handleBombTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
+    e.stopPropagation();
     if (e.changedTouches.length > 0) {
       bombTouchIdRef.current = e.changedTouches[0].identifier;
       setIsBombPressed(true);
       onBombPress();
       if ('vibrate' in navigator) {
         try {
-          navigator.vibrate(35);
+          navigator.vibrate(40);
         } catch {
-          // ignore vibration errors
+          // ignore
         }
       }
     }
   };
 
   const handleBombTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
+    e.stopPropagation();
     for (let i = 0; i < e.changedTouches.length; i++) {
       if (e.changedTouches[i].identifier === bombTouchIdRef.current) {
         bombTouchIdRef.current = null;
@@ -182,109 +205,120 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     }
   };
 
-  const handleBombMouseDown = () => {
+  const handleBombMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsBombPressed(true);
     onBombPress();
   };
 
-  const handleBombMouseUp = () => {
+  const handleBombMouseUp = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsBombPressed(false);
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex items-center justify-between px-3 sm:px-6 py-2 select-none touch-none pointer-events-auto flex-shrink-0 z-30">
-      {/* Dynamic 360° Analog Roller Joystick (Left Side) */}
-      <div className="flex flex-col items-center gap-1">
-        <div
-          ref={joyBaseRef}
-          onTouchStart={handleJoyTouchStart}
-          onTouchMove={handleJoyTouchMove}
-          onTouchEnd={handleJoyTouchEnd}
-          onTouchCancel={handleJoyTouchEnd}
-          onMouseDown={handleJoyMouseDown}
-          onMouseMove={handleJoyMouseMove}
-          onMouseUp={handleJoyMouseUp}
-          className={`relative w-28 h-28 xs:w-32 xs:h-32 sm:w-36 sm:h-36 rounded-full bg-[#0d1117]/90 backdrop-blur-md border-2 transition-colors cursor-pointer touch-none shadow-2xl flex items-center justify-center ${
-            isStickActive
-              ? 'border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-              : 'border-white/20'
-          }`}
-        >
-          {/* Outer Guideline Rings */}
-          <div className="absolute inset-2 rounded-full border border-dashed border-white/10 pointer-events-none" />
-          <div className="absolute inset-6 rounded-full border border-white/5 pointer-events-none" />
-
-          {/* Directional Notch Indicators */}
-          <ArrowUp
-            className={`absolute top-1.5 w-3.5 h-3.5 transition ${
-              activeDir.includes('UP') ? 'text-cyan-400 scale-125' : 'text-white/20'
-            }`}
-          />
-          <ArrowDown
-            className={`absolute bottom-1.5 w-3.5 h-3.5 transition ${
-              activeDir.includes('DOWN') ? 'text-cyan-400 scale-125' : 'text-white/20'
-            }`}
-          />
-          <ArrowLeft
-            className={`absolute left-1.5 w-3.5 h-3.5 transition ${
-              activeDir.includes('LEFT') ? 'text-cyan-400 scale-125' : 'text-white/20'
-            }`}
-          />
-          <ArrowRight
-            className={`absolute right-1.5 w-3.5 h-3.5 transition ${
-              activeDir.includes('RIGHT') ? 'text-cyan-400 scale-125' : 'text-white/20'
-            }`}
-          />
-
-          {/* Smooth Floating Roller Knob / Thumbstick */}
+    <>
+      {/* Full-Screen Touch Capture Zone for Dynamic Anywhere Joystick (Covers screen except bomb button) */}
+      <div
+        onTouchStart={handleTouchZoneStart}
+        onTouchMove={handleTouchZoneMove}
+        onTouchEnd={handleTouchZoneEnd}
+        onTouchCancel={handleTouchZoneEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        className="fixed inset-0 z-20 touch-none select-none pointer-events-auto"
+      >
+        {/* Floating Dynamic Joystick Visuals (Spawns wherever finger touches down) */}
+        {isActive && (
           <div
             style={{
-              transform: `translate(${stickPos.x}px, ${stickPos.y}px)`,
-              transition: isStickActive ? 'none' : 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)',
+              position: 'fixed',
+              left: `${origin.x}px`,
+              top: `${origin.y}px`,
+              transform: 'translate(-50%, -50%)',
             }}
-            className={`relative w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-lg border-2 pointer-events-none ${
-              isStickActive
-                ? 'bg-gradient-to-br from-cyan-400 to-blue-600 border-cyan-200 shadow-cyan-500/60 scale-105'
-                : 'bg-gradient-to-br from-neutral-800 to-neutral-900 border-white/20'
-            }`}
+            className="pointer-events-none z-40 w-32 h-32 rounded-full bg-[#0a0f1d]/85 backdrop-blur-md border-2 border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.5)] flex items-center justify-center animate-in fade-in zoom-in duration-75"
           >
-            {/* Center Core Dot */}
-            <div
-              className={`w-4 h-4 rounded-full transition ${
-                isStickActive ? 'bg-white shadow-[0_0_8px_#fff]' : 'bg-white/30'
+            {/* Guide Rings */}
+            <div className="absolute inset-2 rounded-full border border-dashed border-cyan-400/30" />
+            <div className="absolute inset-6 rounded-full border border-white/10" />
+
+            {/* 4 Cardinal Notches */}
+            <ArrowUp
+              className={`absolute top-1.5 w-4 h-4 transition ${
+                activeDir.includes('UP') ? 'text-cyan-300 scale-125' : 'text-white/30'
               }`}
             />
+            <ArrowDown
+              className={`absolute bottom-1.5 w-4 h-4 transition ${
+                activeDir.includes('DOWN') ? 'text-cyan-300 scale-125' : 'text-white/30'
+              }`}
+            />
+            <ArrowLeft
+              className={`absolute left-1.5 w-4 h-4 transition ${
+                activeDir.includes('LEFT') ? 'text-cyan-300 scale-125' : 'text-white/30'
+              }`}
+            />
+            <ArrowRight
+              className={`absolute right-1.5 w-4 h-4 transition ${
+                activeDir.includes('RIGHT') ? 'text-cyan-300 scale-125' : 'text-white/30'
+              }`}
+            />
+
+            {/* Floating Thumbstick Knob */}
+            <div
+              style={{
+                transform: `translate(${knobOffset.x}px, ${knobOffset.y}px)`,
+              }}
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 border-2 border-white shadow-[0_0_15px_rgba(6,182,212,0.8)] flex items-center justify-center"
+            >
+              <div className="w-4 h-4 rounded-full bg-white shadow-[0_0_8px_#fff]" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Persistent Bottom Bar with Idle Indicator & Dedicated Multi-Touch Bomb Button */}
+      <div className="w-full max-w-5xl mx-auto flex items-end justify-between px-4 sm:px-6 py-2 pb-safe select-none pointer-events-none flex-shrink-0 z-30">
+        {/* Left Side Idle Touch Guide (When not touching) */}
+        <div className="flex flex-col items-start gap-1">
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0a0f1d]/80 border border-cyan-500/30 backdrop-blur-md transition-opacity duration-300 ${
+              isActive ? 'opacity-0' : 'opacity-90 animate-pulse'
+            }`}
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-cyan-300 font-mono-arcade">
+              DRAG ANYWHERE TO MOVE
+            </span>
           </div>
         </div>
 
-        <span className="text-[9px] font-black uppercase tracking-widest text-cyan-400/70 font-mono-arcade">
-          ROLL TO MOVE
-        </span>
-      </div>
+        {/* Right Side Glowing Bomb Button (Always on top & multi-touch responsive) */}
+        <div className="flex flex-col items-center gap-1 pointer-events-auto">
+          <button
+            onTouchStart={handleBombTouchStart}
+            onTouchEnd={handleBombTouchEnd}
+            onTouchCancel={handleBombTouchEnd}
+            onMouseDown={handleBombMouseDown}
+            onMouseUp={handleBombMouseUp}
+            className={`w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-red-500 via-red-600 to-red-700 text-white border-4 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.7)] flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-none select-none transition-transform ${
+              isBombPressed ? 'scale-90 brightness-125 border-red-200 shadow-[0_0_40px_rgba(239,68,68,0.9)]' : 'active:scale-95'
+            }`}
+            aria-label="Drop Bomb"
+          >
+            <Bomb className="w-8 h-8 xs:w-9 xs:h-9 drop-shadow-lg animate-pulse" />
+            <span className="text-[11px] xs:text-xs font-black italic tracking-wider uppercase font-mono-arcade">
+              BOMB
+            </span>
+          </button>
 
-      {/* Large Glowing Circular Bomb Button (Right Side - Multi-Touch) */}
-      <div className="flex flex-col items-center gap-1">
-        <button
-          onTouchStart={handleBombTouchStart}
-          onTouchEnd={handleBombTouchEnd}
-          onTouchCancel={handleBombTouchEnd}
-          onMouseDown={handleBombMouseDown}
-          onMouseUp={handleBombMouseUp}
-          className={`w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-red-500 via-red-600 to-red-700 text-white border-4 border-red-400/80 shadow-[0_0_30px_rgba(239,68,68,0.6)] flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-none select-none transition-transform ${
-            isBombPressed ? 'scale-90 brightness-125 border-red-200' : 'active:scale-95'
-          }`}
-          aria-label="Drop Bomb"
-        >
-          <Bomb className="w-8 h-8 xs:w-9 xs:h-9 drop-shadow-lg animate-pulse" />
-          <span className="text-[11px] xs:text-xs font-black italic tracking-wider uppercase font-mono-arcade">
-            BOMB
+          <span className="text-[9px] font-black uppercase tracking-widest text-red-400/80 font-mono-arcade">
+            TAP BOMB
           </span>
-        </button>
-
-        <span className="text-[9px] font-black uppercase tracking-widest text-red-400/70 font-mono-arcade">
-          TAP BOMB
-        </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
