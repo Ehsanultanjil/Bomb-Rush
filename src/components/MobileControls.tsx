@@ -279,12 +279,12 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         )}
       </div>
 
-      {/* Persistent Bottom Bar with Idle Indicator & Dedicated Multi-Touch Bomb Button */}
-      <div className="w-full max-w-5xl mx-auto flex items-end justify-between px-4 sm:px-6 py-2 pb-safe select-none pointer-events-none flex-shrink-0 z-30">
+      {/* Persistent Bottom Controls Layer with Raised Bomb Button & Idle Guide */}
+      <div className="fixed bottom-0 left-0 right-0 px-4 xs:px-6 sm:px-8 pb-[max(1.5rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))] pt-2 select-none pointer-events-none z-30 flex items-end justify-between max-w-5xl mx-auto">
         {/* Left Side Idle Touch Guide (When not touching) */}
-        <div className="flex flex-col items-start gap-1">
+        <div className="flex flex-col items-start gap-1 mb-2">
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0a0f1d]/80 border border-cyan-500/30 backdrop-blur-md transition-opacity duration-300 ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0a0f1d]/85 border border-cyan-500/30 backdrop-blur-md transition-opacity duration-300 shadow-lg ${
               isActive ? 'opacity-0' : 'opacity-90 animate-pulse'
             }`}
           >
@@ -295,16 +295,16 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
           </div>
         </div>
 
-        {/* Right Side Glowing Bomb Button (Always on top & multi-touch responsive) */}
-        <div className="flex flex-col items-center gap-1 pointer-events-auto">
+        {/* Right Side Glowing Elevated Bomb Button (Always high, clear & multi-touch responsive) */}
+        <div className="flex flex-col items-center gap-1.5 pointer-events-auto mb-1">
           <button
             onTouchStart={handleBombTouchStart}
             onTouchEnd={handleBombTouchEnd}
             onTouchCancel={handleBombTouchEnd}
             onMouseDown={handleBombMouseDown}
             onMouseUp={handleBombMouseUp}
-            className={`w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-red-500 via-red-600 to-red-700 text-white border-4 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.7)] flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-none select-none transition-transform ${
-              isBombPressed ? 'scale-90 brightness-125 border-red-200 shadow-[0_0_40px_rgba(239,68,68,0.9)]' : 'active:scale-95'
+            className={`w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-red-500 via-red-600 to-red-700 text-white border-4 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.75)] flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-none select-none transition-transform ${
+              isBombPressed ? 'scale-90 brightness-125 border-red-200 shadow-[0_0_40px_rgba(239,68,68,0.95)]' : 'active:scale-95'
             }`}
             aria-label="Drop Bomb"
           >
@@ -314,7 +314,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
             </span>
           </button>
 
-          <span className="text-[9px] font-black uppercase tracking-widest text-red-400/80 font-mono-arcade">
+          <span className="text-[9px] font-black uppercase tracking-widest text-red-300/90 font-mono-arcade drop-shadow">
             TAP BOMB
           </span>
         </div>
