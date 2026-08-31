@@ -1,0 +1,6 @@
+{
+  "name": "Bomb Rush",
+  "description": "Plant. Run. Survive. A high-octane grid arcade game featuring responsive controls, dynamic power-ups, smart enemies, and retro synth audio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
