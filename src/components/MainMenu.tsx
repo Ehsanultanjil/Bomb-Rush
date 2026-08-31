@@ -108,22 +108,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   }, []);
 
   return (
-    <main className="relative w-full h-full min-h-[520px] flex flex-col items-center justify-center p-4 overflow-hidden select-none">
+    <main className="relative w-full h-full min-h-0 flex flex-col items-center justify-center p-3 sm:p-4 overflow-y-auto select-none pt-safe pb-safe">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
       {/* Content Container */}
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center text-center gap-5 bg-[#111]/90 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl box-glow-cyan">
+      <div className="relative z-10 w-full max-w-md my-auto flex flex-col items-center text-center gap-3.5 sm:gap-5 bg-[#111]/90 backdrop-blur-xl p-4 sm:p-6 md:p-8 rounded-3xl border border-white/10 shadow-2xl box-glow-cyan">
         {/* Animated Brand Header */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/30 animate-pulse">
-            <Bomb className="w-10 h-10 text-white drop-shadow-md" />
+        <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+          <div className="inline-flex items-center justify-center p-2.5 sm:p-3.5 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/30 animate-pulse">
+            <Bomb className="w-7 h-7 sm:w-10 sm:h-10 text-white drop-shadow-md" />
           </div>
 
-          <h1 className="text-5xl sm:text-6xl font-black italic tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 arcade-glow">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black italic tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 arcade-glow">
             BOMB RUSH
           </h1>
 
-          <p className="text-xs sm:text-sm font-black tracking-[0.3em] uppercase text-cyan-400 font-mono-arcade mt-1">
+          <p className="text-[11px] sm:text-xs md:text-sm font-black tracking-[0.25em] sm:tracking-[0.3em] uppercase text-cyan-400 font-mono-arcade mt-0.5 sm:mt-1">
             PLANT. RUN. SURVIVE.
           </p>
         </div>

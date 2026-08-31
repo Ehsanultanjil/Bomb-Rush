@@ -48,7 +48,7 @@ export const CompactTopHUD: React.FC<CompactTopHUDProps> = ({
   const isDual = stats.gameMode === 'DUAL' && player2;
 
   return (
-    <header className="w-full flex md:hidden items-center justify-between gap-2 px-3 py-2 bg-[#0a0914]/95 border-b border-white/10 select-none z-30 flex-shrink-0">
+    <header className="w-full flex md:hidden items-center justify-between gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 pt-safe bg-[#0a0914]/95 border-b border-white/10 select-none z-30 flex-shrink-0">
       {/* Left side: Player 1 Vitals & Upgrades */}
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">

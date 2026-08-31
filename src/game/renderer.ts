@@ -19,13 +19,14 @@ export class GameRenderer {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     
     // Maximize viewport coverage for full screen arcade immersion
-    const padding = containerWidth < 640 ? 4 : 8;
-    const availWidth = Math.max(containerWidth - padding * 2, 260);
-    const availHeight = Math.max(containerHeight - padding * 2, 220);
+    const padding = containerWidth < 480 ? 2 : containerWidth < 768 ? 4 : 8;
+    const availWidth = Math.max(containerWidth - padding * 2, 220);
+    const availHeight = Math.max(containerHeight - padding * 2, 160);
 
     const maxCellW = Math.floor(availWidth / GRID_COLS);
     const maxCellH = Math.floor(availHeight / GRID_ROWS);
-    this.cellSize = Math.max(Math.min(maxCellW, maxCellH), 22);
+    // Allow down to 14px on ultra-compact mobile views to ensure full arena visibility without clipping controls
+    this.cellSize = Math.max(Math.min(maxCellW, maxCellH), 14);
 
     const arenaWidth = this.cellSize * GRID_COLS;
     const arenaHeight = this.cellSize * GRID_ROWS;

@@ -391,11 +391,11 @@ export default function App() {
           {/* Center: Full-Screen Game Arena Canvas Container */}
           <div
             ref={containerRef}
-            className="relative flex-1 w-full h-full flex items-center justify-center min-h-0 overflow-hidden"
+            className="relative flex-1 w-full h-full min-h-0 flex items-center justify-center overflow-hidden"
           >
             <canvas
               ref={handleCanvasRef}
-              className="rounded-2xl border border-white/10 shadow-2xl shadow-cyan-500/10 bg-[#0c0d14]"
+              className="rounded-xl sm:rounded-2xl border border-white/10 shadow-2xl shadow-cyan-500/10 bg-[#0c0d14]"
             />
 
             {/* Countdown Overlay before round starts */}
@@ -459,12 +459,14 @@ export default function App() {
             />
           </div>
 
-          {/* Virtual Mobile Controls (shown on touch devices or small screens) */}
-          {(isTouchDevice || window.innerWidth < 768) && gameState === 'PLAYING' && (
-            <MobileControls
-              onDirectionChange={handleMobileDirection}
-              onBombPress={handleMobileBomb}
-            />
+          {/* Virtual Mobile Controls (always visible in game view for touch or mobile viewports) */}
+          {gameState === 'PLAYING' && (
+            <div className="flex md:hidden w-full flex-shrink-0">
+              <MobileControls
+                onDirectionChange={handleMobileDirection}
+                onBombPress={handleMobileBomb}
+              />
+            </div>
           )}
         </div>
       )}

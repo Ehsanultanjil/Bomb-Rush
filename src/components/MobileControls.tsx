@@ -116,7 +116,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   const isRightActive = activeDir === 'RIGHT' || activeDir === 'UP_RIGHT' || activeDir === 'DOWN_RIGHT';
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex items-center justify-between px-4 py-2 select-none touch-none pointer-events-auto">
+    <div className="w-full max-w-5xl mx-auto flex items-center justify-between px-3 sm:px-6 py-1.5 sm:py-2 pb-safe select-none touch-none pointer-events-auto flex-shrink-0 z-30">
       {/* Directional D-Pad (Left Side) with 8-Way Touch Area */}
       <div
         ref={dpadElementRef}
@@ -128,88 +128,90 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         onMouseMove={handleDpadMouseMove}
         onMouseUp={handleDpadMouseUp}
         onMouseLeave={handleDpadMouseUp}
-        className="relative w-36 h-36 sm:w-40 sm:h-40 grid grid-cols-3 grid-rows-3 gap-1.5 bg-[#111] p-2 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-md cursor-pointer touch-none"
+        className="relative w-28 h-28 xs:w-32 xs:h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 grid grid-cols-3 grid-rows-3 gap-1 bg-[#111]/95 p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl border border-white/15 shadow-2xl backdrop-blur-md cursor-pointer touch-none"
       >
         {/* Diagonal Indicator / Touch Corners */}
-        <div className={`col-start-1 row-start-1 rounded-xl transition ${activeDir === 'UP_LEFT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
-        <div className={`col-start-3 row-start-1 rounded-xl transition ${activeDir === 'UP_RIGHT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
-        <div className={`col-start-1 row-start-3 rounded-xl transition ${activeDir === 'DOWN_LEFT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
-        <div className={`col-start-3 row-start-3 rounded-xl transition ${activeDir === 'DOWN_RIGHT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
+        <div className={`col-start-1 row-start-1 rounded-lg transition ${activeDir === 'UP_LEFT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
+        <div className={`col-start-3 row-start-1 rounded-lg transition ${activeDir === 'UP_RIGHT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
+        <div className={`col-start-1 row-start-3 rounded-lg transition ${activeDir === 'DOWN_LEFT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
+        <div className={`col-start-3 row-start-3 rounded-lg transition ${activeDir === 'DOWN_RIGHT' ? 'bg-cyan-500/30' : 'bg-transparent'}`} />
 
         {/* Up */}
         <div className="col-start-2 row-start-1 flex items-center justify-center pointer-events-none">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition border ${
+            className={`w-8 h-8 xs:w-9 xs:h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg transition border ${
               isUpActive
                 ? 'bg-cyan-500 text-black border-cyan-300 scale-95 shadow-cyan-500/50'
                 : 'bg-[#222] text-white border-white/10'
             }`}
           >
-            <ArrowUp className="w-6 h-6" />
+            <ArrowUp className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
 
         {/* Left */}
         <div className="col-start-1 row-start-2 flex items-center justify-center pointer-events-none">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition border ${
+            className={`w-8 h-8 xs:w-9 xs:h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg transition border ${
               isLeftActive
                 ? 'bg-cyan-500 text-black border-cyan-300 scale-95 shadow-cyan-500/50'
                 : 'bg-[#222] text-white border-white/10'
             }`}
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
 
         {/* Center Indicator */}
         <div className="col-start-2 row-start-2 flex items-center justify-center pointer-events-none">
-          <div className="w-7 h-7 rounded-full bg-[#080808] border border-white/10 flex items-center justify-center">
-            <div className={`w-2.5 h-2.5 rounded-full transition ${activeDir !== 'NONE' ? 'bg-cyan-400 scale-125' : 'bg-white/20'}`} />
+          <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-[#080808] border border-white/10 flex items-center justify-center">
+            <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition ${activeDir !== 'NONE' ? 'bg-cyan-400 scale-125' : 'bg-white/20'}`} />
           </div>
         </div>
 
         {/* Right */}
         <div className="col-start-3 row-start-2 flex items-center justify-center pointer-events-none">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition border ${
+            className={`w-8 h-8 xs:w-9 xs:h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg transition border ${
               isRightActive
                 ? 'bg-cyan-500 text-black border-cyan-300 scale-95 shadow-cyan-500/50'
                 : 'bg-[#222] text-white border-white/10'
             }`}
           >
-            <ArrowRight className="w-6 h-6" />
+            <ArrowRight className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
 
         {/* Down */}
         <div className="col-start-2 row-start-3 flex items-center justify-center pointer-events-none">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition border ${
+            className={`w-8 h-8 xs:w-9 xs:h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg transition border ${
               isDownActive
                 ? 'bg-cyan-500 text-black border-cyan-300 scale-95 shadow-cyan-500/50'
                 : 'bg-[#222] text-white border-white/10'
             }`}
           >
-            <ArrowDown className="w-6 h-6" />
+            <ArrowDown className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
       </div>
 
       {/* Large Circular Bomb Button (Right Side - Independent Multi-Touch) */}
-      <div className="flex flex-col items-center gap-1.5">
+      <div className="flex flex-col items-center gap-1">
         <button
           onTouchStart={handleBombTouchStart}
           onMouseDown={handleBombMouseDown}
-          className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-600 hover:bg-red-500 active:bg-red-700 text-white border-4 border-red-800 shadow-[0_0_30px_rgba(220,38,38,0.5)] active:scale-90 transition flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-none"
+          className="w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-red-600 hover:bg-red-500 active:bg-red-700 text-white border-3 sm:border-4 border-red-800 shadow-[0_0_25px_rgba(220,38,38,0.5)] active:scale-90 transition flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-none"
           aria-label="Place Bomb"
         >
-          <Bomb className="w-8 h-8 drop-shadow-md" />
-          <span className="text-[11px] sm:text-xs font-black italic tracking-widest uppercase">
+          <Bomb className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 drop-shadow-md" />
+          <span className="text-[10px] xs:text-[11px] sm:text-xs font-black italic tracking-widest uppercase">
             BOMB
           </span>
         </button>
-        <span className="text-[9px] font-black uppercase tracking-widest text-white/40">ACTION: SPACE / TAP</span>
+        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-white/40">
+          TAP BOMB
+        </span>
       </div>
     </div>
   );
